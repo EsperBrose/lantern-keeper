@@ -6,7 +6,7 @@ A browser arcade survival game (Vampire Survivors–style). You play a human wan
 
 ## Phase 1 — Playable core
 - [x] M1. Repo setup: README, PLAN.md, blank canvas page, Pages deploy + lint CI
-- [ ] M2. The wanderer: move with WASD/arrows/touch, dark forest background, lantern light radius
+- [x] M2. The wanderer: move with WASD/arrows/touch, dark forest background, lantern light radius
 - [ ] M3. Shadow creatures spawn and chase you; health + game over
 - [ ] M4. Lantern auto-attack burns creatures; score + survival timer
 
