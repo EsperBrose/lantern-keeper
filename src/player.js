@@ -7,7 +7,9 @@ export function createPlayer() {
     facing: 1, // 1 = right, -1 = left
     walk: 0, // walk-cycle phase
     moving: false,
-    lightRadius: 190,
+    lightRadius: 125,
+    hp: 100,
+    maxHp: 100,
   };
 }
 

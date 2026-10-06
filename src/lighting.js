@@ -12,7 +12,7 @@ export function resizeLighting(w, h, dpr) {
 export function drawDarkness(ctx, w, h, lights) {
   dctx.globalCompositeOperation = 'source-over';
   dctx.clearRect(0, 0, w, h);
-  dctx.fillStyle = 'rgba(3, 4, 10, 0.93)';
+  dctx.fillStyle = 'rgba(3, 4, 10, 0.86)';
   dctx.fillRect(0, 0, w, h);
 
   dctx.globalCompositeOperation = 'destination-out';
