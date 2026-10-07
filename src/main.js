@@ -29,6 +29,7 @@ import {
   canPlaceHere,
   drawHotbar,
 } from './build.js';
+import { updateTowers, drawShots } from './towers.js';
 import { createPlayer, updatePlayer, drawPlayer, lanternPos, trySwing, swingPoint } from './player.js';
 import { drawGround, drawTrees, resetWorld, updateWorld, nodesNear, hitNode } from './world.js';
 import { createPopups, addPopup, updatePopups, drawPopups, drawIcon } from './popups.js';
@@ -93,6 +94,7 @@ function newGame() {
     popups: createPopups(),
     base: createBase(),
     build: createBuild(),
+    shots: [],
   };
   resetWorld();
   state.cycle.banner = { text: 'Day 1', sub: 'Gather and build before night falls', color: '#ffd98a', t: 3 };
@@ -183,6 +185,7 @@ function update(dt) {
     if (hits.length > 0) damage(hits[0], WALL_SMASH_DPS * dt);
   }
   updateStructures(s.base, dt);
+  s.kills += updateTowers(s.base, s.zombies, s.shots, dt);
   s.zombies = s.zombies.filter((z) => !z.dead);
 
   const biting = countTouching(s.zombies, p);
@@ -288,6 +291,7 @@ function draw() {
     { y: p.y, draw: () => drawPlayer(ctx, p) },
   ].sort((a, b) => a.y - b.y);
   for (const t of things) t.draw();
+  drawShots(ctx, s.shots);
 
   const b = s.build;
   if (b.on && b.target && s.mode === 'play') {
