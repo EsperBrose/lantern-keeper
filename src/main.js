@@ -172,7 +172,7 @@ function draw() {
     if (a === p) drawPlayer(ctx, p);
     else drawZombie(ctx, a);
   }
-  drawTrees(ctx, cam, vw, vh);
+  drawTrees(ctx, cam, vw, vh, p);
   ctx.restore();
 
   const lp = toScreen(lanternPos(p).x, lanternPos(p).y);

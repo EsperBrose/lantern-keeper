@@ -27,6 +27,8 @@ function forEachTile(cam, w, h, fn) {
 }
 
 function treeAt(tx, ty) {
+  // Clearing around the spawn point — a good spot for a base.
+  if (Math.abs(tx + 0.5) < 2 && Math.abs(ty + 0.5) < 2) return null;
   if (hash(tx, ty, 7) < 0.55) return null;
   return {
     kind: 'tree',
@@ -177,13 +179,17 @@ function drawCube(ctx, x, y, w, h) {
 }
 
 // Trees are drawn after the characters so canopies overlap them.
-export function drawTrees(ctx, cam, w, h) {
+// A tree turns see-through while the player stands behind it.
+export function drawTrees(ctx, cam, w, h, player) {
   forEachTile(cam, w, h, (tx, ty) => {
     const t = treeAt(tx, ty);
     if (!t || isGone(t)) return;
     const x = t.x + shakeOf(t);
     const y = t.y;
     const s = t.s;
+    const behind =
+      Math.abs(player.x - x) < 26 * s && player.y < y && player.y > y - 85 * s;
+    ctx.globalAlpha = behind ? 0.4 : 1;
     // Shadow + trunk
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.fillRect(x - 12 * s, y - 2 * s, 24 * s, 5 * s);
@@ -199,6 +205,7 @@ export function drawTrees(ctx, cam, w, h) {
     const T = 28 * s;
     leafBlock(ctx, x - T / 2, ly - T * 0.75, T, T * 0.75, tx, ty, 50);
   });
+  ctx.globalAlpha = 1;
 }
 
 function leafBlock(ctx, x, y, w, h, tx, ty, seed) {
