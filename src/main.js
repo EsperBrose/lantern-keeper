@@ -1,6 +1,7 @@
-import { moveVector, attachTouch, drawJoystick } from './input.js';
-import { createPlayer, updatePlayer, drawPlayer, lanternPos } from './player.js';
-import { drawGround, drawTrees } from './world.js';
+import { moveVector, attachTouch, attackHeld, drawTouchControls } from './input.js';
+import { createPlayer, updatePlayer, drawPlayer, lanternPos, trySwing, swingPoint } from './player.js';
+import { drawGround, drawTrees, resetWorld, updateWorld, nodesNear, hitNode } from './world.js';
+import { createPopups, addPopup, updatePopups, drawPopups, drawIcon } from './popups.js';
 import { resizeLighting, drawDarkness } from './lighting.js';
 import {
   createSpawner,
@@ -55,7 +56,11 @@ function newGame() {
     cam: { x: 0, y: 0 },
     time: 0,
     hurtFlash: 0,
+    inv: { wood: 0, stone: 0 },
+    kills: 0,
+    popups: createPopups(),
   };
+  resetWorld();
   state.cycle.banner = { text: 'Day 1', sub: 'Gather and build before night falls', color: '#ffd98a', t: 3 };
 }
 newGame();
@@ -64,9 +69,37 @@ function restart() {
   if (state.mode === 'over') newGame();
 }
 window.addEventListener('keydown', (e) => {
-  if (e.key === ' ' || e.key === 'Enter') restart();
+  if (e.key === 'Enter') restart();
 });
 canvas.addEventListener('pointerdown', restart);
+
+// One axe swing: hits zombies in front of you and the nearest tree or rock.
+function swingAxe(s) {
+  const p = s.player;
+  const sp = swingPoint(p);
+  for (const z of s.zombies) {
+    if (z.burn !== undefined || z.dead) continue;
+    if (Math.hypot(z.x - sp.x, z.y - 6 - sp.y) > 24) continue;
+    z.hp -= 1;
+    z.hurt = 0.12;
+    z.x += p.aimX * 14;
+    z.y += p.aimY * 14;
+    if (z.hp <= 0) {
+      z.dead = true;
+      s.kills++;
+    }
+  }
+
+  const nodes = nodesNear(sp.x, sp.y + 6, 26);
+  if (nodes.length === 0) return;
+  nodes.sort((a, b) => Math.hypot(a.x - sp.x, a.y - sp.y) - Math.hypot(b.x - sp.x, b.y - sp.y));
+  const n = nodes[0];
+  const destroyed = hitNode(n);
+  const res = n.kind === 'tree' ? 'wood' : 'stone';
+  const gain = destroyed ? 3 : 1;
+  s.inv[res] += gain;
+  addPopup(s.popups, n.x, n.y - 24, `+${gain}`, res);
+}
 
 // World units visible from the center to the screen corner.
 function viewRadius() {
@@ -84,6 +117,9 @@ function update(dt) {
   if (started === 'night') s.spawner.timer = 0;
 
   updatePlayer(p, moveVector(), dt);
+  updateWorld(dt);
+  updatePopups(s.popups, dt);
+  if (attackHeld() && trySwing(p)) swingAxe(s);
   if (isNight(s.cycle)) updateSpawner(s.spawner, s.zombies, p, s.cycle.day, viewRadius(), dt);
   updateZombies(s.zombies, p, dt);
   s.zombies = s.zombies.filter((z) => !z.dead);
@@ -133,6 +169,23 @@ function drawHud() {
     drawHeart(14 + i * 20, 14, px, Math.ceil(fill * 2) / 2);
   }
 
+  // Inventory
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(10, 36, 206, 26);
+  ctx.font = '10px "Press Start 2P", monospace';
+  ctx.textAlign = 'left';
+  const items = [
+    ['wood', state.inv.wood],
+    ['stone', state.inv.stone],
+    ['skull', state.kills],
+  ];
+  items.forEach(([icon, n], i) => {
+    const x = 16 + i * 68;
+    drawIcon(ctx, icon, x, 41, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(String(n), x + 20, 55);
+  });
+
   drawClock(ctx, state.cycle, W / 2, 32);
 }
 
@@ -149,7 +202,7 @@ function drawGameOver() {
   ctx.fillText(`You survived ${n} night${n === 1 ? '' : 's'}`, W / 2, H / 2 + 24);
   ctx.fillStyle = '#a0a4ad';
   ctx.font = '10px "Press Start 2P", monospace';
-  ctx.fillText('Press Space or tap to try again', W / 2, H / 2 + 54);
+  ctx.fillText('Press Enter or tap to try again', W / 2, H / 2 + 54);
 }
 
 function draw() {
@@ -173,6 +226,7 @@ function draw() {
     else drawZombie(ctx, a);
   }
   drawTrees(ctx, cam, vw, vh, p);
+  drawPopups(ctx, s.popups);
   ctx.restore();
 
   const lp = toScreen(lanternPos(p).x, lanternPos(p).y);
@@ -198,7 +252,7 @@ function draw() {
   drawHud();
   drawBanner(ctx, s.cycle, W, H);
   if (s.mode === 'over') drawGameOver();
-  else drawJoystick(ctx);
+  else drawTouchControls(ctx);
 }
 
 let last = performance.now();
