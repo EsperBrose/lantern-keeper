@@ -5,6 +5,7 @@ export const TYPES = {
   wood: { name: 'Wood Wall', cost: { wood: 4 }, hp: 60 },
   stone: { name: 'Stone Wall', cost: { stone: 3 }, hp: 160 },
   tower: { name: 'Arrow Tower', cost: { wood: 10, stone: 5 }, hp: 120, range: 150, reload: 0.7 },
+  tesla: { name: 'Electric Gun', cost: { wood: 6, stone: 14 }, hp: 140, range: 115, reload: 1.3 },
 };
 
 export function createBase() {
@@ -129,7 +130,35 @@ const WALL_H = 16; // how tall walls look
 // Draws any structure type with its top-left grid corner at (x, y).
 export function drawShape(ctx, type, x, y, flash, angle = -0.6) {
   if (type === 'tower') drawTower(ctx, x, y, flash, angle);
+  else if (type === 'tesla') drawTesla(ctx, x, y, flash);
   else drawWallBlock(ctx, type, x, y, flash);
+}
+
+// Where a tesla's orb sits, relative to its grid corner.
+export const TESLA_ORB = { dx: 12, dy: -30 };
+
+function drawTesla(ctx, x, y, flash) {
+  const S = LOOK.stone;
+  // Stone base
+  ctx.fillStyle = flash ? '#ffffff' : S.top;
+  ctx.fillRect(x, y + 4, GRID, 10);
+  ctx.fillStyle = flash ? '#ffffff' : S.face;
+  ctx.fillRect(x, y + 14, GRID, 12);
+  // Copper coil
+  for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = flash ? '#ffffff' : i % 2 ? '#b8662e' : '#e08a3c';
+    ctx.fillRect(x + 7, y + 4 - i * 4 - 4, 10, 4);
+  }
+  ctx.fillStyle = flash ? '#ffffff' : '#3a3a3a';
+  ctx.fillRect(x + 4, y - 26, 16, 3);
+  // Glowing orb (pulses)
+  const pulse = 0.75 + Math.sin(performance.now() / 120) * 0.25;
+  ctx.fillStyle = `rgba(120, 210, 255, ${0.35 * pulse})`;
+  ctx.fillRect(x + TESLA_ORB.dx - 9, y + TESLA_ORB.dy - 9, 18, 18);
+  ctx.fillStyle = flash ? '#ffffff' : '#7fd8ff';
+  ctx.fillRect(x + TESLA_ORB.dx - 6, y + TESLA_ORB.dy - 6, 12, 12);
+  ctx.fillStyle = '#e8f8ff';
+  ctx.fillRect(x + TESLA_ORB.dx - 4, y + TESLA_ORB.dy - 4, 4, 4);
 }
 
 function drawTower(ctx, x, y, flash, angle) {
@@ -169,7 +198,7 @@ export function drawStructure(ctx, s) {
   const x = s.gx * GRID;
   const y = s.gy * GRID;
   drawShape(ctx, s.type, x, y, s.hurt > 0, s.angle);
-  drawHealth(ctx, s, x, s.type === 'tower' ? y - 18 : y);
+  drawHealth(ctx, s, x, s.type === 'wood' || s.type === 'stone' ? y : y - 22);
 }
 
 // Cracks + health bar when damaged
