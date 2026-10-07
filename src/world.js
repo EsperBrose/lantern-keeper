@@ -18,7 +18,7 @@ function forEachTile(cam, w, h, fn) {
 }
 
 export function drawGround(ctx, cam, w, h) {
-  ctx.fillStyle = '#1c2a1e';
+  ctx.fillStyle = '#4a7a3a';
   ctx.fillRect(cam.x - w / 2, cam.y - h / 2, w, h);
 
   forEachTile(cam, w, h, (tx, ty) => {
@@ -28,7 +28,7 @@ export function drawGround(ctx, cam, w, h) {
     for (let i = 0; i < 6; i++) {
       const gx = bx + hash(tx, ty, i) * TILE;
       const gy = by + hash(tx, ty, i + 20) * TILE;
-      ctx.strokeStyle = hash(tx, ty, i + 40) > 0.5 ? '#2c4430' : '#253a28';
+      ctx.strokeStyle = hash(tx, ty, i + 40) > 0.5 ? '#5a8c45' : '#3d6b31';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(gx - 3, gy);
@@ -44,12 +44,12 @@ export function drawGround(ctx, cam, w, h) {
       const fx = bx + hash(tx, ty, 100) * TILE;
       const fy = by + hash(tx, ty, 101) * TILE;
       if (hash(tx, ty, 102) > 0.5) {
-        ctx.fillStyle = '#c9a0dc';
+        ctx.fillStyle = '#e6b8f0';
         ctx.beginPath();
         ctx.arc(fx, fy, 2.5, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        ctx.fillStyle = '#3d4640';
+        ctx.fillStyle = '#8a8f88';
         ctx.beginPath();
         ctx.ellipse(fx, fy, 7, 4.5, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -66,10 +66,10 @@ export function drawTrees(ctx, cam, w, h) {
     const y = ty * TILE + hash(tx, ty, 9) * TILE;
     const s = 0.8 + hash(tx, ty, 10) * 0.6;
     // Trunk
-    ctx.fillStyle = '#2e2119';
+    ctx.fillStyle = '#5a3d28';
     ctx.fillRect(x - 5 * s, y - 14 * s, 10 * s, 18 * s);
     // Pine layers
-    const shades = ['#16301f', '#1b3a25', '#21452c'];
+    const shades = ['#2d5a35', '#356b3d', '#3f7a47'];
     for (let i = 0; i < 3; i++) {
       const ly = y - 14 * s - i * 16 * s;
       const lw = (30 - i * 7) * s;

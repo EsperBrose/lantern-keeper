@@ -7,9 +7,9 @@ export function createSpawner() {
   return { timer: 0, interval: 1.6 };
 }
 
-export function updateSpawner(sp, zombies, player, elapsed, viewRadius, dt) {
-  // Spawn faster the longer you survive.
-  sp.interval = Math.max(0.35, 1.6 - elapsed * 0.012);
+export function updateSpawner(sp, zombies, player, night, viewRadius, dt) {
+  // Each night brings zombies faster than the last.
+  sp.interval = Math.max(0.3, 1.5 - (night - 1) * 0.2);
   sp.timer -= dt;
   while (sp.timer <= 0) {
     sp.timer += sp.interval;
@@ -30,8 +30,21 @@ export function updateSpawner(sp, zombies, player, elapsed, viewRadius, dt) {
   }
 }
 
+// Sunrise: every zombie catches fire and burns away.
+export function igniteAll(zombies) {
+  for (const z of zombies) {
+    if (z.burn === undefined) z.burn = 1 + Math.random() * 1.5;
+  }
+}
+
 export function updateZombies(zombies, player, dt) {
   for (const z of zombies) {
+    if (z.burn !== undefined) {
+      z.burn -= dt;
+      if (z.burn <= 0) z.dead = true;
+      z.phase += dt * 12; // flailing
+      continue;
+    }
     z.phase += dt * 5;
     const dx = player.x - z.x;
     const dy = player.y - z.y;
@@ -68,6 +81,7 @@ export function updateZombies(zombies, player, dt) {
 export function countTouching(zombies, player) {
   let n = 0;
   for (const z of zombies) {
+    if (z.burn !== undefined) continue;
     if (Math.hypot(z.x - player.x, z.y - player.y) < z.r + 10) n++;
   }
   return n;
@@ -135,13 +149,35 @@ export function drawZombie(ctx, z) {
   ctx.fillRect(4, -12, 3, 1.5);
 
   ctx.restore();
+
+  if (z.burn !== undefined) drawFlames(ctx, z);
+}
+
+function drawFlames(ctx, z) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) {
+    const fx = z.x + Math.sin(z.phase * 1.3 + i * 2.1) * 7;
+    const fy = z.y - 4 - i * 5 - Math.abs(Math.sin(z.phase + i)) * 6;
+    const fr = 7 - i;
+    const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
+    g.addColorStop(0, 'rgba(255, 230, 120, 0.9)');
+    g.addColorStop(0.5, 'rgba(255, 120, 30, 0.6)');
+    g.addColorStop(1, 'rgba(255, 60, 0, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 // Glowing eyes, drawn on top of the darkness so you can see them coming.
-export function drawZombieEyes(ctx, z) {
+export function drawZombieEyes(ctx, z, glow) {
+  if (z.burn !== undefined || glow <= 0) return;
   const ex = z.x + z.facing * 4;
   const ey = z.y - 16;
-  ctx.fillStyle = 'rgba(255, 60, 40, 0.9)';
+  ctx.fillStyle = `rgba(255, 60, 40, ${0.9 * glow})`;
   ctx.shadowColor = '#ff3020';
   ctx.shadowBlur = 6;
   ctx.fillRect(ex - 1, ey, 1.8, 1.8);
