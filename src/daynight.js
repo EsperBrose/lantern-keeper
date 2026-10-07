@@ -58,6 +58,27 @@ export function darkness(c) {
   }
 }
 
+// Pixel icons: each character is a palette index ('.' = empty).
+const SUN = {
+  palette: { a: '#ffe14a', b: '#ffb52e' },
+  rows: ['...b...', '.b.a.b.', '..aaa..', 'baaaaab', '..aaa..', '.b.a.b.', '...b...'],
+};
+const MOON = {
+  palette: { a: '#e8ecff', b: '#b8c0e0' },
+  rows: ['..aaa..', '.aab...', 'aab....', 'aab....', 'aab....', '.aab...', '..aaa..'],
+};
+
+function drawPixelIcon(ctx, icon, x, y, px) {
+  icon.rows.forEach((row, r) => {
+    for (let col = 0; col < row.length; col++) {
+      const color = icon.palette[row[col]];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(x + col * px, y + r * px, px, px);
+    }
+  });
+}
+
 export function drawClock(ctx, c, x, y) {
   const name = phaseName(c);
   const p = PHASES[c.phase];
@@ -66,13 +87,16 @@ export function drawClock(ctx, c, x, y) {
 
   ctx.save();
   ctx.textAlign = 'center';
-  ctx.font = 'bold 22px Georgia, serif';
+  ctx.font = '14px "Press Start 2P", monospace';
   ctx.fillStyle = isDark ? '#ff8a7a' : '#ffe9a8';
   ctx.strokeStyle = 'rgba(0,0,0,0.6)';
   ctx.lineWidth = 4;
-  const label = name === 'night' || name === 'dawn' ? `🌙 Night ${c.day}` : `☀️ Day ${c.day}`;
-  ctx.strokeText(label, x, y);
-  ctx.fillText(label, x, y);
+  const moon = name === 'night' || name === 'dawn';
+  const label = moon ? `Night ${c.day}` : `Day ${c.day}`;
+  const tw = ctx.measureText(label).width;
+  ctx.strokeText(label, x + 12, y);
+  ctx.fillText(label, x + 12, y);
+  drawPixelIcon(ctx, moon ? MOON : SUN, x + 12 - tw / 2 - 26, y - 15, 2.5);
 
   // Progress bar for the current phase
   const bw = 140;
@@ -81,7 +105,7 @@ export function drawClock(ctx, c, x, y) {
   ctx.fillStyle = isDark ? '#7a8cff' : '#ffc94a';
   ctx.fillRect(x - bw / 2, y + 10, bw * (1 - c.t / p.length), 4);
 
-  ctx.font = '13px Georgia, serif';
+  ctx.font = '9px "Press Start 2P", monospace';
   ctx.fillStyle = '#e8e2d0';
   const hint = {
     day: `Night falls in ${left + PHASES[1].length}s`,
@@ -103,11 +127,11 @@ export function drawBanner(ctx, c, w, h) {
   ctx.textAlign = 'center';
   ctx.strokeStyle = 'rgba(0,0,0,0.7)';
   ctx.lineWidth = 6;
-  ctx.font = 'bold 48px Georgia, serif';
+  ctx.font = '28px "Press Start 2P", monospace';
   ctx.fillStyle = b.color;
   ctx.strokeText(b.text, w / 2, h * 0.3);
   ctx.fillText(b.text, w / 2, h * 0.3);
-  ctx.font = '18px Georgia, serif';
+  ctx.font = '11px "Press Start 2P", monospace';
   ctx.fillStyle = '#e8e2d0';
   ctx.lineWidth = 4;
   ctx.strokeText(b.sub, w / 2, h * 0.3 + 32);
