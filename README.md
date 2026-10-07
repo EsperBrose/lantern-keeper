@@ -1,7 +1,12 @@
 # 🏮 Lantern Keeper
 
-A browser arcade survival game. You're a lone wanderer lost in a dark forest at night, armed only with a lantern. Zombies close in from the darkness, hungry for you. Fight them off, collect glow, level up, and see how long you last.
+A browser survival base-builder.
 
-Built with plain HTML5 Canvas + JavaScript. No install, no build step.
+☀️ **By day** the forest is bright and safe — gather wood and stone and build your base: walls, arrow towers and electric guns.
+🌙 **By night** you light your lantern and zombies pour out of the dark to attack you and your base. Survive until sunrise — the sun burns them away. Every night is harder than the last.
 
-See [PLAN.md](PLAN.md) for the roadmap.
+**Play:** https://esperbrose.github.io/lantern-keeper/
+
+**Controls:** WASD / arrow keys to move (or drag on a phone).
+
+Built with plain HTML5 Canvas + JavaScript. No install, no build step. See [PLAN.md](PLAN.md) for the roadmap.

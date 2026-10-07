@@ -7,9 +7,18 @@ import {
   updateSpawner,
   updateZombies,
   countTouching,
+  igniteAll,
   drawZombie,
   drawZombieEyes,
 } from './zombies.js';
+import {
+  createCycle,
+  updateCycle,
+  isNight,
+  darkness,
+  drawClock,
+  drawBanner,
+} from './daynight.js';
 
 const ZOOM = 1.7;
 const BITE_DPS = 18; // damage per second per zombie touching you
@@ -40,11 +49,12 @@ function newGame() {
     player: createPlayer(),
     zombies: [],
     spawner: createSpawner(),
+    cycle: createCycle(),
     cam: { x: 0, y: 0 },
-    elapsed: 0,
     time: 0,
     hurtFlash: 0,
   };
+  state.cycle.banner = { text: 'Day 1', sub: 'Gather and build before night falls', color: '#ffd98a', t: 3 };
 }
 newGame();
 
@@ -66,11 +76,15 @@ function update(dt) {
   s.time += dt;
   if (s.mode !== 'play') return;
 
-  s.elapsed += dt;
   const p = s.player;
+  const started = updateCycle(s.cycle, dt);
+  if (started === 'dawn') igniteAll(s.zombies);
+  if (started === 'night') s.spawner.timer = 0;
+
   updatePlayer(p, moveVector(), dt);
-  updateSpawner(s.spawner, s.zombies, p, s.elapsed, viewRadius(), dt);
+  if (isNight(s.cycle)) updateSpawner(s.spawner, s.zombies, p, s.cycle.day, viewRadius(), dt);
   updateZombies(s.zombies, p, dt);
+  s.zombies = s.zombies.filter((z) => !z.dead);
 
   const biting = countTouching(s.zombies, p);
   if (biting > 0) {
@@ -105,13 +119,7 @@ function drawHud() {
   ctx.textAlign = 'left';
   ctx.fillText(`${Math.ceil(p.hp)} / ${p.maxHp}`, 20, 26);
 
-  // Survival time
-  const t = Math.floor(state.elapsed);
-  const mm = String(Math.floor(t / 60)).padStart(2, '0');
-  const ss = String(t % 60).padStart(2, '0');
-  ctx.font = 'bold 22px Georgia, serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${mm}:${ss}`, W / 2, 32);
+  drawClock(ctx, state.cycle, W / 2, 32);
 }
 
 function drawGameOver() {
@@ -123,8 +131,8 @@ function drawGameOver() {
   ctx.fillText('The zombies got you', W / 2, H / 2 - 10);
   ctx.fillStyle = '#ffd98a';
   ctx.font = '18px Georgia, serif';
-  const t = Math.floor(state.elapsed);
-  ctx.fillText(`You survived ${t} seconds`, W / 2, H / 2 + 24);
+  const n = state.cycle.nightsSurvived;
+  ctx.fillText(`You survived ${n} night${n === 1 ? '' : 's'}`, W / 2, H / 2 + 24);
   ctx.fillStyle = '#a0a4ad';
   ctx.font = '15px Georgia, serif';
   ctx.fillText('Press Space or tap to try again', W / 2, H / 2 + 54);
@@ -155,13 +163,14 @@ function draw() {
 
   const lp = toScreen(lanternPos(p).x, lanternPos(p).y);
   const flicker = Math.sin(s.time * 7) * 4 + Math.sin(s.time * 19) * 2;
-  drawDarkness(ctx, W, H, [{ x: lp.x, y: lp.y, r: (p.lightRadius + flicker) * ZOOM }]);
+  const dark = darkness(s.cycle);
+  drawDarkness(ctx, W, H, dark, [{ x: lp.x, y: lp.y, r: (p.lightRadius + flicker) * ZOOM }]);
 
   ctx.save();
   ctx.translate(W / 2, H / 2);
   ctx.scale(ZOOM, ZOOM);
   ctx.translate(-cam.x, -cam.y);
-  for (const z of s.zombies) drawZombieEyes(ctx, z);
+  for (const z of s.zombies) drawZombieEyes(ctx, z, dark / 0.86);
   ctx.restore();
 
   if (s.hurtFlash > 0) {
@@ -173,6 +182,7 @@ function draw() {
   }
 
   drawHud();
+  drawBanner(ctx, s.cycle, W, H);
   if (s.mode === 'over') drawGameOver();
   else drawJoystick(ctx);
 }
