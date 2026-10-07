@@ -4,6 +4,7 @@ export const GRID = 24;
 export const TYPES = {
   wood: { name: 'Wood Wall', cost: { wood: 4 }, hp: 60 },
   stone: { name: 'Stone Wall', cost: { stone: 3 }, hp: 160 },
+  tower: { name: 'Arrow Tower', cost: { wood: 10, stone: 5 }, hp: 120, range: 150, reload: 0.7 },
 };
 
 export function createBase() {
@@ -125,12 +126,54 @@ const LOOK = {
 };
 const WALL_H = 16; // how tall walls look
 
+// Draws any structure type with its top-left grid corner at (x, y).
+export function drawShape(ctx, type, x, y, flash, angle = -0.6) {
+  if (type === 'tower') drawTower(ctx, x, y, flash, angle);
+  else drawWallBlock(ctx, type, x, y, flash);
+}
+
+function drawTower(ctx, x, y, flash, angle) {
+  const S = LOOK.stone;
+  // Stone pillar
+  ctx.fillStyle = flash ? '#ffffff' : S.face;
+  ctx.fillRect(x + 2, y - 22, 20, 48);
+  ctx.fillStyle = flash ? '#ffffff' : '#9a9fa5';
+  ctx.fillRect(x + 2, y - 22, 6, 48);
+  if (!flash) {
+    ctx.fillStyle = S.line;
+    for (let i = 0; i < 6; i++) ctx.fillRect(x + 2, y - 16 + i * 7, 20, 1);
+    ctx.fillRect(x + 11, y - 10, 2, 6); // arrow slit
+  }
+  // Wooden platform with crenellations
+  ctx.fillStyle = flash ? '#ffffff' : LOOK.wood.top;
+  ctx.fillRect(x - 1, y - 28, 26, 7);
+  ctx.fillStyle = flash ? '#ffffff' : LOOK.wood.face;
+  ctx.fillRect(x - 1, y - 22, 26, 3);
+  ctx.fillStyle = flash ? '#ffffff' : S.top;
+  ctx.fillRect(x - 1, y - 33, 6, 5);
+  ctx.fillRect(x + 19, y - 33, 6, 5);
+  // Crossbow, turned toward its target
+  ctx.save();
+  ctx.translate(x + 12, y - 29);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#5a3a1e';
+  ctx.fillRect(-4, -1.5, 14, 3);
+  ctx.fillStyle = '#2b2b2b';
+  ctx.fillRect(6, -7, 2.5, 14);
+  ctx.fillStyle = '#d8d8d8';
+  ctx.fillRect(10, -0.5, 3, 1);
+  ctx.restore();
+}
+
 export function drawStructure(ctx, s) {
   const x = s.gx * GRID;
   const y = s.gy * GRID;
-  drawWallBlock(ctx, s.type, x, y, s.hurt > 0);
+  drawShape(ctx, s.type, x, y, s.hurt > 0, s.angle);
+  drawHealth(ctx, s, x, s.type === 'tower' ? y - 18 : y);
+}
 
-  // Cracks + health bar when damaged
+// Cracks + health bar when damaged
+function drawHealth(ctx, s, x, y) {
   if (s.hp < s.maxHp) {
     const f = s.hp / s.maxHp;
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -184,8 +227,19 @@ export function drawWallBlock(ctx, type, x, y, flash) {
 
 export function drawGhost(ctx, type, gx, gy, ok) {
   ctx.save();
+  const range = TYPES[type].range;
+  if (range) {
+    // Show how far the tower can reach
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(gx * GRID + GRID / 2, gy * GRID + GRID / 2, range, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
   ctx.globalAlpha = 0.5;
-  drawWallBlock(ctx, type, gx * GRID, gy * GRID, false);
+  drawShape(ctx, type, gx * GRID, gy * GRID, false);
   ctx.globalAlpha = 1;
   ctx.strokeStyle = ok ? '#ffffff' : '#ff4a3a';
   ctx.lineWidth = 1.5;

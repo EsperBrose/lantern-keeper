@@ -14,7 +14,7 @@ A browser survival base-builder. By **day** it's bright and safe: gather wood an
 - [x] M5a. Boxy look: Minecraft-style blocky grass, trees, stone, characters, pixel hearts and pixel font
 - [x] M5. Fight back + gather: swing an axe (Space/tap) to kill zombies, chop trees for wood, mine rocks for stone; inventory HUD
 - [x] M6. Build your base: build menu, place wood and stone walls; zombies must smash through them
-- [ ] M7. Arrow tower: auto-shoots arrows at the nearest zombie
+- [x] M7. Arrow tower: auto-shoots arrows at the nearest zombie
 - [ ] M8. Electric gun: tesla tower that zaps zombies with chain lightning
 
 ## Phase 3 — Challenge and polish

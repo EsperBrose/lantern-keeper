@@ -1,13 +1,18 @@
 // Build mode: hotbar, choosing a cell, placing and removing structures.
-import { GRID, TYPES, cellAt, structureAt, canAfford, place, demolish, drawWallBlock } from './structures.js';
+import {
+  GRID,
+  TYPES,
+  cellAt,
+  structureAt,
+  canAfford,
+  costText,
+  place,
+  demolish,
+  drawShape,
+} from './structures.js';
 
 // Hotbar slots. Locked slots unlock in later milestones.
-export const HOTBAR = [
-  { type: 'wood' },
-  { type: 'stone' },
-  { type: null, label: 'TOWER' },
-  { type: null, label: 'ZAP' },
-];
+export const HOTBAR = [{ type: 'wood' }, { type: 'stone' }, { type: 'tower' }, { type: null, label: 'ZAP' }];
 const SLOT = 52;
 const GAP = 6;
 const PLACE_COOLDOWN = 0.12;
@@ -145,15 +150,18 @@ export function drawHotbar(ctx, b, inv, w, h) {
 
     if (slot.type) {
       ctx.save();
-      ctx.translate(r.x + r.w / 2 - 12, r.y + 18);
-      ctx.scale(1, 0.8);
-      drawWallBlock(ctx, slot.type, 0, 0, false);
+      if (slot.type === 'tower') {
+        ctx.translate(r.x + r.w / 2 - 7, r.y + 24);
+        ctx.scale(0.55, 0.55);
+      } else {
+        ctx.translate(r.x + r.w / 2 - 12, r.y + 18);
+        ctx.scale(1, 0.8);
+      }
+      drawShape(ctx, slot.type, 0, 0, false);
       ctx.restore();
-      const n = Object.values(TYPES[slot.type].cost)[0];
       ctx.fillStyle = canAfford(inv, slot.type) ? '#ffffff' : '#ff7a6a';
-      ctx.font = '7px "Press Start 2P", monospace';
-      const res = Object.keys(TYPES[slot.type].cost)[0];
-      ctx.fillText(`${n} ${res}`, r.x + r.w / 2, r.y + r.h - 4);
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.fillText(costText(slot.type), r.x + r.w / 2, r.y + r.h - 4);
     } else {
       ctx.fillStyle = '#777777';
       ctx.font = '7px "Press Start 2P", monospace';
@@ -169,7 +177,7 @@ export function drawHotbar(ctx, b, inv, w, h) {
   ctx.lineWidth = 3;
   const hint = b.on
     ? `${TYPES[HOTBAR[b.slot].type].name}: click/Space place  X remove  B close`
-    : 'B or 1-2: build';
+    : 'B or 1-3: build';
   ctx.strokeText(hint, w / 2, top - 10);
   ctx.fillText(hint, w / 2, top - 10);
   if (b.toast) {
