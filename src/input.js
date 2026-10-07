@@ -1,18 +1,40 @@
-// Keyboard (WASD / arrows) and a floating touch joystick.
+// Keyboard (WASD / arrows, Space/J to swing), mouse click to swing,
+// and on touch screens a floating joystick plus an axe button.
 const keys = new Set();
 const touch = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0 };
 const JOY_RADIUS = 50;
+const BUTTON_RADIUS = 38;
+let attackTouchId = null;
+let mouseDown = false;
+let isTouch = false;
 
 window.addEventListener('keydown', (e) => {
   keys.add(e.key.toLowerCase());
-  if (e.key.startsWith('Arrow')) e.preventDefault();
+  if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
 });
 window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
-window.addEventListener('blur', () => keys.clear());
+window.addEventListener('blur', () => {
+  keys.clear();
+  mouseDown = false;
+});
+
+function buttonPos() {
+  return { x: window.innerWidth - 70, y: window.innerHeight - 80 };
+}
 
 export function attachTouch(el) {
   el.addEventListener('pointerdown', (e) => {
-    if (e.pointerType === 'mouse' || touch.active) return;
+    if (e.pointerType === 'mouse') {
+      mouseDown = true;
+      return;
+    }
+    isTouch = true;
+    const b = buttonPos();
+    if (Math.hypot(e.clientX - b.x, e.clientY - b.y) < BUTTON_RADIUS + 12) {
+      attackTouchId = e.pointerId;
+      return;
+    }
+    if (touch.active) return;
     touch.active = true;
     touch.id = e.pointerId;
     touch.ox = touch.x = e.clientX;
@@ -24,12 +46,18 @@ export function attachTouch(el) {
     touch.y = e.clientY;
   });
   const end = (e) => {
+    if (e.pointerType === 'mouse') mouseDown = false;
+    if (e.pointerId === attackTouchId) attackTouchId = null;
     if (e.pointerId !== touch.id) return;
     touch.active = false;
     touch.id = null;
   };
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
+}
+
+export function attackHeld() {
+  return keys.has(' ') || keys.has('j') || mouseDown || attackTouchId !== null;
 }
 
 // Returns a movement vector with length <= 1.
@@ -55,22 +83,30 @@ export function moveVector() {
   return len > 0 ? { x: x / len, y: y / len } : { x: 0, y: 0 };
 }
 
-export function drawJoystick(ctx) {
-  if (!touch.active) return;
-  const dx = touch.x - touch.ox;
-  const dy = touch.y - touch.oy;
-  const len = Math.hypot(dx, dy);
-  const k = len > JOY_RADIUS ? JOY_RADIUS / len : 1;
+export function drawTouchControls(ctx) {
+  if (!isTouch) return;
   ctx.save();
-  ctx.globalAlpha = 0.35;
+  // Axe button
+  const b = buttonPos();
+  ctx.globalAlpha = attackTouchId !== null ? 0.8 : 0.5;
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(b.x - BUTTON_RADIUS, b.y - BUTTON_RADIUS, BUTTON_RADIUS * 2, BUTTON_RADIUS * 2);
   ctx.strokeStyle = '#ffd98a';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(touch.ox, touch.oy, JOY_RADIUS, 0, Math.PI * 2);
-  ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.strokeRect(b.x - BUTTON_RADIUS, b.y - BUTTON_RADIUS, BUTTON_RADIUS * 2, BUTTON_RADIUS * 2);
   ctx.fillStyle = '#ffd98a';
-  ctx.beginPath();
-  ctx.arc(touch.ox + dx * k, touch.oy + dy * k, 18, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.font = '10px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('AXE', b.x, b.y + 5);
+
+  if (touch.active) {
+    const dx = touch.x - touch.ox;
+    const dy = touch.y - touch.oy;
+    const len = Math.hypot(dx, dy);
+    const k = len > JOY_RADIUS ? JOY_RADIUS / len : 1;
+    ctx.globalAlpha = 0.35;
+    ctx.strokeRect(touch.ox - JOY_RADIUS, touch.oy - JOY_RADIUS, JOY_RADIUS * 2, JOY_RADIUS * 2);
+    ctx.fillRect(touch.ox + dx * k - 16, touch.oy + dy * k - 16, 32, 32);
+  }
   ctx.restore();
 }
