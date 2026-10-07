@@ -7,11 +7,36 @@ const BUTTON_RADIUS = 38;
 let attackTouchId = null;
 let mouseDown = false;
 let isTouch = false;
+const pressed = new Set(); // keys pressed since last consumeKey
+const mouse = { x: 0, y: 0, active: false };
+let tapHandler = () => false;
 
 window.addEventListener('keydown', (e) => {
-  keys.add(e.key.toLowerCase());
+  const k = e.key.toLowerCase();
+  if (!e.repeat) pressed.add(k);
+  keys.add(k);
   if (e.key.startsWith('Arrow') || e.key === ' ') e.preventDefault();
 });
+
+// Returns true once per press of key k.
+export function consumeKey(k) {
+  return pressed.delete(k);
+}
+
+// Screen position of the mouse, if it is being used.
+export function mousePos() {
+  return mouse;
+}
+
+// handler(x, y) is called on every click/tap first; return true to swallow it.
+export function onTap(handler) {
+  tapHandler = handler;
+}
+
+export function setAttackLabel(label) {
+  attackLabel = label;
+}
+let attackLabel = 'AXE';
 window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
 window.addEventListener('blur', () => {
   keys.clear();
@@ -24,11 +49,13 @@ function buttonPos() {
 
 export function attachTouch(el) {
   el.addEventListener('pointerdown', (e) => {
+    if (tapHandler(e.clientX, e.clientY)) return;
     if (e.pointerType === 'mouse') {
       mouseDown = true;
       return;
     }
     isTouch = true;
+    mouse.active = false;
     const b = buttonPos();
     if (Math.hypot(e.clientX - b.x, e.clientY - b.y) < BUTTON_RADIUS + 12) {
       attackTouchId = e.pointerId;
@@ -41,6 +68,11 @@ export function attachTouch(el) {
     touch.oy = touch.y = e.clientY;
   });
   el.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'mouse') {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+    }
     if (e.pointerId !== touch.id) return;
     touch.x = e.clientX;
     touch.y = e.clientY;
@@ -97,7 +129,7 @@ export function drawTouchControls(ctx) {
   ctx.fillStyle = '#ffd98a';
   ctx.font = '10px "Press Start 2P", monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('AXE', b.x, b.y + 5);
+  ctx.fillText(attackLabel, b.x, b.y + 5);
 
   if (touch.active) {
     const dx = touch.x - touch.ox;

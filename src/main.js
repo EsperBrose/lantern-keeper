@@ -1,4 +1,34 @@
-import { moveVector, attachTouch, attackHeld, drawTouchControls } from './input.js';
+import {
+  moveVector,
+  attachTouch,
+  attackHeld,
+  drawTouchControls,
+  consumeKey,
+  mousePos,
+  onTap,
+  setAttackLabel,
+} from './input.js';
+import {
+  createBase,
+  updateStructures,
+  collide,
+  damage,
+  drawStructure,
+  drawGhost,
+  GRID,
+} from './structures.js';
+import {
+  HOTBAR,
+  createBuild,
+  handleTap,
+  handleKeys,
+  updateTarget,
+  tryPlace,
+  tryDemolish,
+  updateBuild,
+  canPlaceHere,
+  drawHotbar,
+} from './build.js';
 import { createPlayer, updatePlayer, drawPlayer, lanternPos, trySwing, swingPoint } from './player.js';
 import { drawGround, drawTrees, resetWorld, updateWorld, nodesNear, hitNode } from './world.js';
 import { createPopups, addPopup, updatePopups, drawPopups, drawIcon } from './popups.js';
@@ -16,6 +46,7 @@ import {
   createCycle,
   updateCycle,
   isNight,
+  phaseName,
   darkness,
   drawClock,
   drawBanner,
@@ -23,6 +54,7 @@ import {
 
 const ZOOM = 1.7;
 const BITE_DPS = 18; // damage per second per zombie touching you
+const WALL_SMASH_DPS = 12; // damage per second a blocked zombie does to a wall
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -59,6 +91,8 @@ function newGame() {
     inv: { wood: 0, stone: 0 },
     kills: 0,
     popups: createPopups(),
+    base: createBase(),
+    build: createBuild(),
   };
   resetWorld();
   state.cycle.banner = { text: 'Day 1', sub: 'Gather and build before night falls', color: '#ffd98a', t: 3 };
@@ -72,6 +106,11 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') restart();
 });
 canvas.addEventListener('pointerdown', restart);
+onTap((x, y) => state.mode === 'play' && handleTap(state.build, x, y, W, H));
+
+function screenToWorld(x, y) {
+  return { x: (x - W / 2) / ZOOM + state.cam.x, y: (y - H / 2) / ZOOM + state.cam.y };
+}
 
 // One axe swing: hits zombies in front of you and the nearest tree or rock.
 function swingAxe(s) {
@@ -117,11 +156,33 @@ function update(dt) {
   if (started === 'night') s.spawner.timer = 0;
 
   updatePlayer(p, moveVector(), dt);
+  collide(s.base, p, 7);
   updateWorld(dt);
   updatePopups(s.popups, dt);
-  if (attackHeld() && trySwing(p)) swingAxe(s);
+
+  // Building (day and sunset only) or swinging the axe
+  const b = s.build;
+  handleKeys(b, consumeKey);
+  updateBuild(b, dt);
+  updateTarget(b, p, mousePos(), screenToWorld);
+  setAttackLabel(b.on ? 'PLACE' : 'AXE');
+  if (b.on) {
+    const phase = phaseName(s.cycle);
+    if (attackHeld()) tryPlace(b, s.base, s.inv, p, phase === 'day' || phase === 'dusk');
+    if (consumeKey('x')) tryDemolish(b, s.base, s.inv);
+  } else if (attackHeld() && trySwing(p)) {
+    swingAxe(s);
+  }
+
   if (isNight(s.cycle)) updateSpawner(s.spawner, s.zombies, p, s.cycle.day, viewRadius(), dt);
   updateZombies(s.zombies, p, dt);
+  // Walls block zombies; blocked zombies smash the wall in their way.
+  for (const z of s.zombies) {
+    if (z.burn !== undefined) continue;
+    const hits = collide(s.base, z, 9);
+    if (hits.length > 0) damage(hits[0], WALL_SMASH_DPS * dt);
+  }
+  updateStructures(s.base, dt);
   s.zombies = s.zombies.filter((z) => !z.dead);
 
   const biting = countTouching(s.zombies, p);
@@ -187,6 +248,7 @@ function drawHud() {
   });
 
   drawClock(ctx, state.cycle, W / 2, 32);
+  if (state.mode === 'play') drawHotbar(ctx, state.build, state.inv, W, H);
 }
 
 function drawGameOver() {
@@ -219,11 +281,17 @@ function draw() {
   ctx.translate(-cam.x, -cam.y);
   drawGround(ctx, cam, vw, vh);
 
-  // Draw characters back-to-front for correct overlap.
-  const actors = [...s.zombies, p].sort((a, b) => a.y - b.y);
-  for (const a of actors) {
-    if (a === p) drawPlayer(ctx, p);
-    else drawZombie(ctx, a);
+  // Draw characters and buildings back-to-front for correct overlap.
+  const things = [
+    ...s.zombies.map((z) => ({ y: z.y, draw: () => drawZombie(ctx, z) })),
+    ...s.base.list.map((st) => ({ y: st.gy * GRID + GRID - 2, draw: () => drawStructure(ctx, st) })),
+    { y: p.y, draw: () => drawPlayer(ctx, p) },
+  ].sort((a, b) => a.y - b.y);
+  for (const t of things) t.draw();
+
+  const b = s.build;
+  if (b.on && b.target && s.mode === 'play') {
+    drawGhost(ctx, HOTBAR[b.slot].type, b.target.gx, b.target.gy, canPlaceHere(b, s.base, s.inv, p));
   }
   drawTrees(ctx, cam, vw, vh, p);
   drawPopups(ctx, s.popups);
