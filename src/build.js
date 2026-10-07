@@ -12,7 +12,7 @@ import {
 } from './structures.js';
 
 // Hotbar slots. Locked slots unlock in later milestones.
-export const HOTBAR = [{ type: 'wood' }, { type: 'stone' }, { type: 'tower' }, { type: null, label: 'ZAP' }];
+export const HOTBAR = [{ type: 'wood' }, { type: 'stone' }, { type: 'tower' }, { type: 'tesla' }];
 const SLOT = 52;
 const GAP = 6;
 const PLACE_COOLDOWN = 0.12;
@@ -150,7 +150,7 @@ export function drawHotbar(ctx, b, inv, w, h) {
 
     if (slot.type) {
       ctx.save();
-      if (slot.type === 'tower') {
+      if (slot.type === 'tower' || slot.type === 'tesla') {
         ctx.translate(r.x + r.w / 2 - 7, r.y + 24);
         ctx.scale(0.55, 0.55);
       } else {
@@ -177,7 +177,7 @@ export function drawHotbar(ctx, b, inv, w, h) {
   ctx.lineWidth = 3;
   const hint = b.on
     ? `${TYPES[HOTBAR[b.slot].type].name}: click/Space place  X remove  B close`
-    : 'B or 1-3: build';
+    : 'B or 1-4: build';
   ctx.strokeText(hint, w / 2, top - 10);
   ctx.fillText(hint, w / 2, top - 10);
   if (b.toast) {

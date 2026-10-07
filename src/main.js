@@ -29,7 +29,7 @@ import {
   canPlaceHere,
   drawHotbar,
 } from './build.js';
-import { updateTowers, drawShots } from './towers.js';
+import { updateTowers, drawShots, updateBolts, drawBolts, towerLights } from './towers.js';
 import { createPlayer, updatePlayer, drawPlayer, lanternPos, trySwing, swingPoint } from './player.js';
 import { drawGround, drawTrees, resetWorld, updateWorld, nodesNear, hitNode } from './world.js';
 import { createPopups, addPopup, updatePopups, drawPopups, drawIcon } from './popups.js';
@@ -95,6 +95,7 @@ function newGame() {
     base: createBase(),
     build: createBuild(),
     shots: [],
+    bolts: [],
   };
   resetWorld();
   state.cycle.banner = { text: 'Day 1', sub: 'Gather and build before night falls', color: '#ffd98a', t: 3 };
@@ -185,7 +186,8 @@ function update(dt) {
     if (hits.length > 0) damage(hits[0], WALL_SMASH_DPS * dt);
   }
   updateStructures(s.base, dt);
-  s.kills += updateTowers(s.base, s.zombies, s.shots, dt);
+  s.kills += updateTowers(s.base, s.zombies, s.shots, s.bolts, dt);
+  updateBolts(s.bolts, dt);
   s.zombies = s.zombies.filter((z) => !z.dead);
 
   const biting = countTouching(s.zombies, p);
@@ -304,13 +306,19 @@ function draw() {
   const lp = toScreen(lanternPos(p).x, lanternPos(p).y);
   const flicker = Math.sin(s.time * 7) * 4 + Math.sin(s.time * 19) * 2;
   const dark = darkness(s.cycle);
-  drawDarkness(ctx, W, H, dark, [{ x: lp.x, y: lp.y, r: (p.lightRadius + flicker) * ZOOM }]);
+  const lights = [{ x: lp.x, y: lp.y, r: (p.lightRadius + flicker) * ZOOM }];
+  for (const l of towerLights(s.base)) {
+    const sp = toScreen(l.x, l.y);
+    lights.push({ x: sp.x, y: sp.y, r: l.r * ZOOM });
+  }
+  drawDarkness(ctx, W, H, dark, lights);
 
   ctx.save();
   ctx.translate(W / 2, H / 2);
   ctx.scale(ZOOM, ZOOM);
   ctx.translate(-cam.x, -cam.y);
   for (const z of s.zombies) drawZombieEyes(ctx, z, dark / 0.86);
+  drawBolts(ctx, s.bolts); // lightning glows through the dark
   ctx.restore();
 
   if (s.hurtFlash > 0) {
