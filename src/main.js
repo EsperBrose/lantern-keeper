@@ -40,6 +40,8 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 attachTouch(canvas);
+// Canvas text doesn't trigger web-font loading on its own.
+if (document.fonts) document.fonts.load('10px "Press Start 2P"');
 
 let state;
 
@@ -106,18 +108,30 @@ function update(dt) {
   s.cam.y += (p.y - s.cam.y) * k;
 }
 
+const HEART = ['.XX.XX.', 'XXXXXXX', 'XXXXXXX', '.XXXXX.', '..XXX..', '...X...'];
+
+// One pixel heart; fill is 0..1 (how much of it, left to right, is red).
+function drawHeart(x, y, px, fill) {
+  for (let r = 0; r < HEART.length; r++) {
+    for (let c = 0; c < 7; c++) {
+      if (HEART[r][c] !== 'X') continue;
+      ctx.fillStyle = c / 7 < fill ? (r === 1 && c < 3 ? '#ff8a80' : '#d62d2d') : '#3a1c1c';
+      ctx.fillRect(x + c * px, y + r * px, px, px);
+    }
+  }
+}
+
 function drawHud() {
   const p = state.player;
-  // Health bar
-  const bw = 180;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(14, 14, bw + 4, 16);
-  ctx.fillStyle = p.hp > 30 ? '#c0392b' : '#ff5a3c';
-  ctx.fillRect(16, 16, (bw * p.hp) / p.maxHp, 12);
-  ctx.fillStyle = '#ffd98a';
-  ctx.font = '12px Georgia, serif';
-  ctx.textAlign = 'left';
-  ctx.fillText(`${Math.ceil(p.hp)} / ${p.maxHp}`, 20, 26);
+  // Ten hearts, 10 HP each
+  const px = 2.5;
+  const hearts = p.maxHp / 10;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(10, 10, hearts * 20 + 6, 22);
+  for (let i = 0; i < hearts; i++) {
+    const fill = Math.max(0, Math.min(1, (p.hp - i * 10) / 10));
+    drawHeart(14 + i * 20, 14, px, Math.ceil(fill * 2) / 2);
+  }
 
   drawClock(ctx, state.cycle, W / 2, 32);
 }
@@ -127,14 +141,14 @@ function drawGameOver() {
   ctx.fillRect(0, 0, W, H);
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ff6b5a';
-  ctx.font = 'bold 44px Georgia, serif';
+  ctx.font = '24px "Press Start 2P", monospace';
   ctx.fillText('The zombies got you', W / 2, H / 2 - 10);
   ctx.fillStyle = '#ffd98a';
-  ctx.font = '18px Georgia, serif';
+  ctx.font = '12px "Press Start 2P", monospace';
   const n = state.cycle.nightsSurvived;
   ctx.fillText(`You survived ${n} night${n === 1 ? '' : 's'}`, W / 2, H / 2 + 24);
   ctx.fillStyle = '#a0a4ad';
-  ctx.font = '15px Georgia, serif';
+  ctx.font = '10px "Press Start 2P", monospace';
   ctx.fillText('Press Space or tap to try again', W / 2, H / 2 + 54);
 }
 

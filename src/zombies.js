@@ -1,7 +1,9 @@
+import { drawPerson } from './blocky.js';
+
 // Zombies: spawn out of the darkness and shamble toward the player.
 const RADIUS = 11;
-const SKINS = ['#7d9a6a', '#6f8c5e', '#8aa37a', '#748f73'];
-const SHIRTS = ['#5a4636', '#3f4e5e', '#5e3a3a', '#4b4b3c'];
+const SKINS = ['#5f9e55', '#4f8f48', '#6aa85e'];
+const SHIRTS = ['#2fa3a8', '#2b8f94', '#5a7f3a', '#7a4a3a'];
 
 export function createSpawner() {
   return { timer: 0, interval: 1.6 };
@@ -87,100 +89,38 @@ export function countTouching(zombies, player) {
   return n;
 }
 
+const HURT = { skin: '#ffffff', hair: '#ffffff', shirt: '#ffdddd', pants: '#ffdddd', boots: '#ffffff', eye: '#ff0000' };
+
 export function drawZombie(ctx, z) {
-  const step = Math.sin(z.phase);
-  ctx.save();
-  ctx.translate(z.x, z.y);
-
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.beginPath();
-  ctx.ellipse(0, 18, 12, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.scale(z.facing, 1);
-  ctx.rotate(Math.sin(z.phase * 0.5) * 0.08 + 0.1); // hunched sway
-
-  // Legs (one drags)
-  ctx.strokeStyle = '#2f2b26';
-  ctx.lineWidth = 4;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(-3, 8);
-  ctx.lineTo(-4 + step * 3, 17);
-  ctx.moveTo(3, 8);
-  ctx.lineTo(4 - step * 1.5, 17);
-  ctx.stroke();
-
-  // Torn shirt
-  ctx.fillStyle = z.shirt;
-  ctx.beginPath();
-  ctx.moveTo(-8, 9);
-  ctx.lineTo(-7, -9);
-  ctx.lineTo(7, -9);
-  ctx.lineTo(8, 9);
-  ctx.lineTo(4, 6);
-  ctx.lineTo(1, 10);
-  ctx.lineTo(-3, 6);
-  ctx.closePath();
-  ctx.fill();
-
-  // Arms reaching forward
-  ctx.strokeStyle = z.skin;
-  ctx.lineWidth = 3.5;
-  ctx.beginPath();
-  ctx.moveTo(2, -6);
-  ctx.lineTo(15, -7 + step * 1.5);
-  ctx.moveTo(-2, -5);
-  ctx.lineTo(12, -3 - step * 1.5);
-  ctx.stroke();
-
-  // Head
-  ctx.fillStyle = z.skin;
-  ctx.beginPath();
-  ctx.arc(2, -15, 6, 0, Math.PI * 2);
-  ctx.fill();
-  // Messy hair
-  ctx.fillStyle = '#2a2420';
-  ctx.beginPath();
-  ctx.arc(1, -17, 6, Math.PI * 1.05, Math.PI * 1.85);
-  ctx.fill();
-  // Mouth
-  ctx.fillStyle = '#3a1a1a';
-  ctx.fillRect(4, -12, 3, 1.5);
-
-  ctx.restore();
-
+  const colors = z.hurt > 0
+    ? HURT
+    : { skin: z.skin, hair: '#3a5e33', shirt: z.shirt, pants: '#3b3f9e', boots: '#2a2a3a', eye: '#1a1a1a' };
+  drawPerson(ctx, z.x, z.y, z.facing, z.phase, true, colors, 'reach');
   if (z.burn !== undefined) drawFlames(ctx, z);
 }
 
+const FLAME_COLORS = ['#fff3a0', '#ffc23a', '#ff7a1a', '#e2401a'];
+
 function drawFlames(ctx, z) {
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 5; i++) {
-    const fx = z.x + Math.sin(z.phase * 1.3 + i * 2.1) * 7;
-    const fy = z.y - 4 - i * 5 - Math.abs(Math.sin(z.phase + i)) * 6;
-    const fr = 7 - i;
-    const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr);
-    g.addColorStop(0, 'rgba(255, 230, 120, 0.9)');
-    g.addColorStop(0.5, 'rgba(255, 120, 30, 0.6)');
-    g.addColorStop(1, 'rgba(255, 60, 0, 0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(fx, fy, fr, 0, Math.PI * 2);
-    ctx.fill();
+  for (let i = 0; i < 9; i++) {
+    const life = (z.phase * 0.4 + i * 0.37) % 1; // 0 = just spawned, 1 = burnt out
+    const fx = Math.round(z.x + Math.sin(i * 2.3 + z.phase * 0.2) * 8);
+    const fy = Math.round(z.y + 6 - life * 30);
+    const size = Math.max(2, 6 * (1 - life));
+    ctx.fillStyle = FLAME_COLORS[Math.min(3, Math.floor(life * 4))];
+    ctx.fillRect(fx - size / 2, fy - size / 2, size, size);
   }
-  ctx.restore();
 }
 
 // Glowing eyes, drawn on top of the darkness so you can see them coming.
 export function drawZombieEyes(ctx, z, glow) {
   if (z.burn !== undefined || glow <= 0) return;
-  const ex = z.x + z.facing * 4;
-  const ey = z.y - 16;
-  ctx.fillStyle = `rgba(255, 60, 40, ${0.9 * glow})`;
-  ctx.shadowColor = '#ff3020';
+  const bob = Math.round(Math.abs(Math.cos(z.phase)) * 2);
+  const ex = Math.round(z.x) + (z.facing > 0 ? 1 : -5);
+  const ey = Math.round(z.y) - 17 - bob;
+  ctx.fillStyle = `rgba(255, 40, 30, ${0.95 * glow})`;
+  ctx.shadowColor = '#ff2010';
   ctx.shadowBlur = 6;
-  ctx.fillRect(ex - 1, ey, 1.8, 1.8);
-  ctx.fillRect(ex + z.facing * 3 - 1, ey, 1.8, 1.8);
+  ctx.fillRect(ex, ey, 4, 2);
   ctx.shadowBlur = 0;
 }

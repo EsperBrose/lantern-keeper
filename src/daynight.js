@@ -66,7 +66,7 @@ export function drawClock(ctx, c, x, y) {
 
   ctx.save();
   ctx.textAlign = 'center';
-  ctx.font = 'bold 22px Georgia, serif';
+  ctx.font = '14px "Press Start 2P", monospace';
   ctx.fillStyle = isDark ? '#ff8a7a' : '#ffe9a8';
   ctx.strokeStyle = 'rgba(0,0,0,0.6)';
   ctx.lineWidth = 4;
@@ -81,7 +81,7 @@ export function drawClock(ctx, c, x, y) {
   ctx.fillStyle = isDark ? '#7a8cff' : '#ffc94a';
   ctx.fillRect(x - bw / 2, y + 10, bw * (1 - c.t / p.length), 4);
 
-  ctx.font = '13px Georgia, serif';
+  ctx.font = '9px "Press Start 2P", monospace';
   ctx.fillStyle = '#e8e2d0';
   const hint = {
     day: `Night falls in ${left + PHASES[1].length}s`,
@@ -103,11 +103,11 @@ export function drawBanner(ctx, c, w, h) {
   ctx.textAlign = 'center';
   ctx.strokeStyle = 'rgba(0,0,0,0.7)';
   ctx.lineWidth = 6;
-  ctx.font = 'bold 48px Georgia, serif';
+  ctx.font = '28px "Press Start 2P", monospace';
   ctx.fillStyle = b.color;
   ctx.strokeText(b.text, w / 2, h * 0.3);
   ctx.fillText(b.text, w / 2, h * 0.3);
-  ctx.font = '18px Georgia, serif';
+  ctx.font = '11px "Press Start 2P", monospace';
   ctx.fillStyle = '#e8e2d0';
   ctx.lineWidth = 4;
   ctx.strokeText(b.sub, w / 2, h * 0.3 + 32);

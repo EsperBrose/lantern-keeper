@@ -11,6 +11,7 @@ A browser survival base-builder. By **day** it's bright and safe: gather wood an
 
 ## Phase 2 — Day, night and building
 - [x] M4. Day/night cycle: game starts in daytime, sunset → night (zombies come) → sunrise (leftover zombies burn); night counter
+- [x] M5a. Boxy look: Minecraft-style blocky grass, trees, stone, characters, pixel hearts and pixel font
 - [ ] M5. Fight back + gather: swing an axe (Space/tap) to kill zombies, chop trees for wood, mine rocks for stone; inventory HUD
 - [ ] M6. Build your base: build menu, place wood and stone walls; zombies must smash through them
 - [ ] M7. Arrow tower: auto-shoots arrows at the nearest zombie
