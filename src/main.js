@@ -89,7 +89,7 @@ function newGame() {
     cam: { x: 0, y: 0 },
     time: 0,
     hurtFlash: 0,
-    inv: { wood: 0, stone: 0 },
+    inv: { wood: 100, stone: 100 }, // start with enough to build a base
     kills: 0,
     popups: createPopups(),
     base: createBase(),
