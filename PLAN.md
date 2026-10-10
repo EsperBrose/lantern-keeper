@@ -20,4 +20,4 @@ A browser survival base-builder. By **day** it's bright and safe: gather wood an
 ## Phase 3 — Challenge and polish
 - [x] M9. Harder nights + new zombies (fast runners, wall-smashing brutes); campfire that heals
 - [x] M10. Title screen, pause, best score (most nights survived)
-- [ ] M11. Sounds, particles, mobile build controls, balance, final README
+- [x] M11. Sounds, particles, mobile build controls, balance, final README
