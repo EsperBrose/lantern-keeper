@@ -9,6 +9,14 @@ A blocky browser survival base-builder.
 
 **https://esperbrose.github.io/lantern-keeper/** — works on desktop and phones, nothing to install.
 
+### 👥 2-player online (each on your own device)
+
+1. One player opens the game and taps **Host 2-player** — a 4-letter room code appears.
+2. The other player opens the game on their own phone or computer, taps **Join 2-player** and types the code.
+3. You share one base and one pile of wood and stone. Zombies chase whoever is closest. If you get knocked out you come back at sunrise — it's only game over if you're **both** down.
+
+The two devices connect directly (WebRTC via [PeerJS](https://peerjs.com/)); PeerJS's free public server just helps them find each other. Some strict school or work networks block this — home Wi-Fi and phone data usually work.
+
 ## 🎮 Controls
 
 | Action | Keyboard / mouse | Phone |

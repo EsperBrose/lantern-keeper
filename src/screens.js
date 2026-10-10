@@ -38,22 +38,23 @@ export function drawTitle(ctx, w, h, best, time) {
   ctx.textAlign = 'center';
   const size = Math.min(40, Math.floor(w / 15));
   const bob = Math.round(Math.sin(time * 2) * 3);
-  outlined(ctx, 'LANTERN', w / 2, h * 0.28 + bob, size, '#ffd25a');
-  outlined(ctx, 'KEEPER', w / 2, h * 0.28 + size * 1.3 + bob, size, '#ffd25a');
-  outlined(ctx, 'Build by day. Survive the night.', w / 2, h * 0.28 + size * 2.4, 10, '#e8e2d0');
-
-  const lines = [
-    'WASD / arrows: move',
-    'Space / click: swing axe',
-    '1-5: build (day only)',
-    'P: pause',
-  ];
-  lines.forEach((l, i) => outlined(ctx, l, w / 2, h * 0.56 + i * 18, 8, '#bfc6d0'));
-
-  if (Math.floor(time * 2) % 2 === 0) {
-    outlined(ctx, 'Press Enter or tap to start', w / 2, h * 0.82, 11, '#ffffff');
+  outlined(ctx, 'LANTERN', w / 2, h * 0.2 + bob, size, '#ffd25a');
+  outlined(ctx, 'KEEPER', w / 2, h * 0.2 + size * 1.3 + bob, size, '#ffd25a');
+  outlined(ctx, 'Build by day. Survive the night.', w / 2, h * 0.2 + size * 2.4, 10, '#e8e2d0');
+  if (best > 0) {
+    outlined(ctx, `Best: ${best} night${best === 1 ? '' : 's'}`, w / 2, h * 0.2 + size * 2.4 + 22, 9, '#7fd8ff');
   }
-  if (best > 0) outlined(ctx, `Best: ${best} night${best === 1 ? '' : 's'}`, w / 2, h * 0.9, 9, '#7fd8ff');
+  ctx.restore();
+}
+
+// A message in the middle of the screen (e.g. "Connecting...").
+export function drawMessage(ctx, w, h, text, sub) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, w, h);
+  ctx.textAlign = 'center';
+  outlined(ctx, text, w / 2, h / 2, 14, '#ffffff');
+  if (sub) outlined(ctx, sub, w / 2, h / 2 + 26, 9, '#bfc6d0');
   ctx.restore();
 }
 
@@ -67,7 +68,7 @@ export function drawPaused(ctx, w, h) {
   ctx.restore();
 }
 
-export function drawGameOver(ctx, w, h, nights, best, newBest) {
+export function drawGameOver(ctx, w, h, nights, best, newBest, prompt = 'Press Enter or tap to try again') {
   ctx.save();
   ctx.fillStyle = 'rgba(20, 0, 0, 0.6)';
   ctx.fillRect(0, 0, w, h);
@@ -76,7 +77,7 @@ export function drawGameOver(ctx, w, h, nights, best, newBest) {
   outlined(ctx, `You survived ${nights} night${nights === 1 ? '' : 's'}`, w / 2, h / 2 + 16, 12, '#ffd98a');
   if (newBest) outlined(ctx, 'NEW BEST!', w / 2, h / 2 + 40, 12, '#7fd8ff');
   else outlined(ctx, `Best: ${best}`, w / 2, h / 2 + 40, 10, '#7fd8ff');
-  outlined(ctx, 'Press Enter or tap to try again', w / 2, h / 2 + 70, 10, '#bfc6d0');
+  outlined(ctx, prompt, w / 2, h / 2 + 70, 10, '#bfc6d0');
   ctx.restore();
 }
 

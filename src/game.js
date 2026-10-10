@@ -87,6 +87,12 @@ function swingAxe(g, p) {
 
 function updateOnePlayer(g, p, inp, dt) {
   updatePlayer(p, { x: inp.mx, y: inp.my }, dt);
+  // An online friend moves on their own device (so it feels instant) and
+  // tells us where they are; trust it unless it's an impossible jump.
+  if (inp.pos && Math.hypot(inp.pos.x - p.x, inp.pos.y - p.y) < 80) {
+    p.x = inp.pos.x;
+    p.y = inp.pos.y;
+  }
   collide(g.base, p, 7);
 
   // Building (day and sunset only) or swinging the axe
