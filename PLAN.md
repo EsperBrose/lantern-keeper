@@ -24,6 +24,6 @@ A browser survival base-builder. By **day** it's bright and safe: gather wood an
 
 ## Phase 4 — Online 2-player (one device each)
 - [x] M12. Two players in one world: split code into simulation / renderer / main; zombies chase the nearest player; shared base and resources; knocked-out players revive at sunrise; game over when both are down
-- [ ] M13. Host & join: title menu with Play solo / Host game (4-letter room code) / Join game (enter code), using PeerJS (WebRTC, peer-to-peer)
-- [ ] M14. Sync: host runs the game; the friend's device sends its controls and receives the world ~20×/sec; P2 in a blue shirt with a name tag
+- [x] M13. Host & join: title menu with Play solo / Host game (4-letter room code) / Join game (enter code), using PeerJS (WebRTC, peer-to-peer)
+- [x] M14. Sync: host runs the game; the friend's device sends its controls and receives the world ~20×/sec; P2 in a blue shirt with a name tag
 - [ ] M15. Polish: smooth movement for the friend, disconnect message, two-browser test

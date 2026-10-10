@@ -10,6 +10,15 @@ export function resetWorld() {
   damaged = new Map();
 }
 
+// For online co-op: the host sends which trees/rocks are damaged or gone.
+export function getWorldDamage() {
+  return [...damaged].map(([k, st]) => [k, st.hp, Math.round(st.shake * 100) / 100]);
+}
+
+export function setWorldDamage(list) {
+  damaged = new Map(list.map(([k, hp, shake]) => [k, { hp, shake }]));
+}
+
 function hash(x, y, n) {
   let h = (x * 374761393 + y * 668265263 + n * 2147483647) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);

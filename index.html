@@ -11,6 +11,32 @@
 </head>
 <body>
   <canvas id="game"></canvas>
+
+  <!-- Title menu (shown over the title screen) -->
+  <div id="menu">
+    <div class="panel" id="menu-main">
+      <button data-act="solo">Play solo</button>
+      <button data-act="host">Host 2-player</button>
+      <button data-act="join">Join 2-player</button>
+      <p class="hint">WASD move &middot; Space axe &middot; 1-5 build</p>
+    </div>
+    <div class="panel" id="menu-host" hidden>
+      <p>Your room code:</p>
+      <div id="room-code">....</div>
+      <p id="host-status" class="hint">Getting a code&hellip;</p>
+      <button data-act="back">Cancel</button>
+    </div>
+    <div class="panel" id="menu-join" hidden>
+      <p>Enter your friend's code:</p>
+      <input id="join-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+      <p id="join-status" class="hint"></p>
+      <button data-act="join-go">Join</button>
+      <button data-act="back">Back</button>
+    </div>
+  </div>
+
+  <!-- PeerJS: connects two devices directly for online co-op. Solo works without it. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>
