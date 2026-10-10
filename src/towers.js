@@ -89,9 +89,26 @@ export function drawBolts(ctx, bolts) {
 
 // Light sources from glowing buildings (for the night darkness).
 export function towerLights(base) {
-  return base.list
-    .filter((t) => t.type === 'tesla')
-    .map((t) => ({ x: t.gx * GRID + TESLA_ORB.dx, y: t.gy * GRID + TESLA_ORB.dy, r: 70 }));
+  const lights = [];
+  for (const t of base.list) {
+    if (t.type === 'tesla') {
+      lights.push({ x: t.gx * GRID + TESLA_ORB.dx, y: t.gy * GRID + TESLA_ORB.dy, r: 70 });
+    } else if (t.type === 'campfire') {
+      lights.push({ x: t.x, y: t.y, r: 95 + Math.sin(performance.now() / 90) * 4 });
+    }
+  }
+  return lights;
+}
+
+// Standing near a campfire slowly heals you.
+export function campfireHeal(base, p, dt) {
+  for (const t of base.list) {
+    const def = TYPES[t.type];
+    if (!def.heal || Math.hypot(t.x - p.x, t.y - p.y) > def.healRange) continue;
+    p.hp = Math.min(p.maxHp, p.hp + def.heal * dt);
+    return true;
+  }
+  return false;
 }
 
 function nearestZombie(zombies, x, y, range) {

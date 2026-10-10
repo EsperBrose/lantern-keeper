@@ -6,6 +6,7 @@ export const TYPES = {
   stone: { name: 'Stone Wall', cost: { stone: 3 }, hp: 160 },
   tower: { name: 'Arrow Tower', cost: { wood: 10, stone: 5 }, hp: 120, range: 150, reload: 0.7 },
   tesla: { name: 'Electric Gun', cost: { wood: 6, stone: 14 }, hp: 140, range: 115, reload: 1.3 },
+  campfire: { name: 'Campfire', cost: { wood: 8, stone: 2 }, hp: 50, heal: 6, healRange: 55 },
 };
 
 export function createBase() {
@@ -131,7 +132,33 @@ const WALL_H = 16; // how tall walls look
 export function drawShape(ctx, type, x, y, flash, angle = -0.6) {
   if (type === 'tower') drawTower(ctx, x, y, flash, angle);
   else if (type === 'tesla') drawTesla(ctx, x, y, flash);
+  else if (type === 'campfire') drawCampfire(ctx, x, y, flash);
   else drawWallBlock(ctx, type, x, y, flash);
+}
+
+const FIRE = ['#fff3a0', '#ffc23a', '#ff7a1a', '#e2401a'];
+
+function drawCampfire(ctx, x, y, flash) {
+  // Ring of stones
+  ctx.fillStyle = flash ? '#ffffff' : '#8d939a';
+  for (const [sx, sy] of [[1, 14], [6, 18], [13, 19], [19, 15], [18, 9], [3, 8]]) {
+    ctx.fillRect(x + sx, y + sy, 5, 4);
+  }
+  // Crossed logs
+  ctx.fillStyle = flash ? '#ffffff' : '#6b4a2b';
+  ctx.fillRect(x + 4, y + 12, 16, 4);
+  ctx.fillStyle = flash ? '#ffffff' : '#8a5a2b';
+  ctx.fillRect(x + 10, y + 6, 4, 13);
+  // Flickering pixel flames
+  const t = performance.now() / 1000;
+  for (let i = 0; i < 8; i++) {
+    const life = (t * 1.6 + i * 0.29) % 1;
+    const fx = x + 12 + Math.sin(i * 1.9 + t * 3) * 4;
+    const fy = y + 12 - life * 18;
+    const size = Math.max(2, 6 * (1 - life));
+    ctx.fillStyle = FIRE[Math.min(3, Math.floor(life * 4))];
+    ctx.fillRect(Math.round(fx - size / 2), Math.round(fy - size / 2), size, size);
+  }
 }
 
 // Where a tesla's orb sits, relative to its grid corner.
@@ -198,7 +225,8 @@ export function drawStructure(ctx, s) {
   const x = s.gx * GRID;
   const y = s.gy * GRID;
   drawShape(ctx, s.type, x, y, s.hurt > 0, s.angle);
-  drawHealth(ctx, s, x, s.type === 'wood' || s.type === 'stone' ? y : y - 22);
+  const tall = s.type === 'tower' || s.type === 'tesla';
+  drawHealth(ctx, s, x, tall ? y - 22 : y);
 }
 
 // Cracks + health bar when damaged

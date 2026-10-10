@@ -1,12 +1,38 @@
 import { drawPerson } from './blocky.js';
 
 // Zombies: spawn out of the darkness and shamble toward the player.
-const RADIUS = 11;
 const SKINS = ['#5f9e55', '#4f8f48', '#6aa85e'];
 const SHIRTS = ['#2fa3a8', '#2b8f94', '#5a7f3a', '#7a4a3a'];
 
+// bite / wall: multipliers for damage to the player and to walls.
+const KINDS = {
+  walker: { r: 11, hp: 3, speed: [38, 60], scale: 1, bite: 1, wall: 1, lurch: 0.4 },
+  runner: { r: 9, hp: 2, speed: [95, 115], scale: 0.85, bite: 0.7, wall: 0.7, lurch: 0.1, shirt: '#c0392b' },
+  brute: {
+    r: 16,
+    hp: 12,
+    speed: [26, 32],
+    scale: 1.45,
+    bite: 2,
+    wall: 3,
+    lurch: 0.3,
+    shirt: '#4a3a2a',
+    skin: '#4a7f42',
+  },
+};
+
 export function createSpawner() {
   return { timer: 0, interval: 1.6 };
+}
+
+// Runners join from night 2, brutes from night 3; both get more common.
+function pickKind(night) {
+  const r = Math.random();
+  const brute = night >= 3 ? Math.min(0.2, 0.06 * (night - 2)) : 0;
+  const runner = night >= 2 ? Math.min(0.35, 0.12 * (night - 1)) : 0;
+  if (r < brute) return 'brute';
+  if (r < brute + runner) return 'runner';
+  return 'walker';
 }
 
 export function updateSpawner(sp, zombies, player, night, viewRadius, dt) {
@@ -17,15 +43,22 @@ export function updateSpawner(sp, zombies, player, night, viewRadius, dt) {
     sp.timer += sp.interval;
     const a = Math.random() * Math.PI * 2;
     const d = viewRadius + 40 + Math.random() * 80;
+    const kind = pickKind(night);
+    const k = KINDS[kind];
     zombies.push({
+      kind,
       x: player.x + Math.cos(a) * d,
       y: player.y + Math.sin(a) * d,
-      r: RADIUS,
-      hp: 3,
-      speed: 38 + Math.random() * 22,
+      r: k.r,
+      hp: k.hp,
+      speed: k.speed[0] + Math.random() * (k.speed[1] - k.speed[0]),
+      scale: k.scale,
+      bite: k.bite,
+      wall: k.wall,
+      lurch: k.lurch,
       phase: Math.random() * 10,
-      skin: SKINS[(Math.random() * SKINS.length) | 0],
-      shirt: SHIRTS[(Math.random() * SHIRTS.length) | 0],
+      skin: k.skin || SKINS[(Math.random() * SKINS.length) | 0],
+      shirt: k.shirt || SHIRTS[(Math.random() * SHIRTS.length) | 0],
       facing: 1,
       hurt: 0,
     });
@@ -47,12 +80,12 @@ export function updateZombies(zombies, player, dt) {
       z.phase += dt * 12; // flailing
       continue;
     }
-    z.phase += dt * 5;
+    z.phase += dt * (z.kind === 'runner' ? 11 : 5);
     const dx = player.x - z.x;
     const dy = player.y - z.y;
     const d = Math.hypot(dx, dy) || 1;
     // Shambling: speed pulses with each lurching step.
-    const lurch = 0.6 + 0.4 * Math.abs(Math.sin(z.phase));
+    const lurch = 1 - z.lurch + z.lurch * Math.abs(Math.sin(z.phase));
     z.x += (dx / d) * z.speed * lurch * dt;
     z.y += (dy / d) * z.speed * lurch * dt;
     z.facing = dx >= 0 ? 1 : -1;
@@ -79,12 +112,12 @@ export function updateZombies(zombies, player, dt) {
   }
 }
 
-// Returns how many zombies are touching the player.
-export function countTouching(zombies, player) {
+// Total bite strength of the zombies touching the player (brutes bite harder).
+export function biteLoad(zombies, player) {
   let n = 0;
   for (const z of zombies) {
     if (z.burn !== undefined) continue;
-    if (Math.hypot(z.x - player.x, z.y - player.y) < z.r + 10) n++;
+    if (Math.hypot(z.x - player.x, z.y - player.y) < z.r + 10) n += z.bite;
   }
   return n;
 }
@@ -95,7 +128,11 @@ export function drawZombie(ctx, z) {
   const colors = z.hurt > 0
     ? HURT
     : { skin: z.skin, hair: '#3a5e33', shirt: z.shirt, pants: '#3b3f9e', boots: '#2a2a3a', eye: '#1a1a1a' };
-  drawPerson(ctx, z.x, z.y, z.facing, z.phase, true, colors, 'reach');
+  ctx.save();
+  ctx.translate(Math.round(z.x), Math.round(z.y));
+  ctx.scale(z.scale, z.scale);
+  drawPerson(ctx, 0, 0, z.facing, z.phase, true, colors, 'reach');
+  ctx.restore();
   if (z.burn !== undefined) drawFlames(ctx, z);
 }
 
@@ -116,11 +153,12 @@ function drawFlames(ctx, z) {
 export function drawZombieEyes(ctx, z, glow) {
   if (z.burn !== undefined || glow <= 0) return;
   const bob = Math.round(Math.abs(Math.cos(z.phase)) * 2);
-  const ex = Math.round(z.x) + (z.facing > 0 ? 1 : -5);
-  const ey = Math.round(z.y) - 17 - bob;
+  const s = z.scale;
+  const ex = Math.round(z.x) + (z.facing > 0 ? 1 : -5) * s;
+  const ey = Math.round(z.y) + (-17 - bob) * s;
   ctx.fillStyle = `rgba(255, 40, 30, ${0.95 * glow})`;
   ctx.shadowColor = '#ff2010';
   ctx.shadowBlur = 6;
-  ctx.fillRect(ex, ey, 4, 2);
+  ctx.fillRect(ex, ey, 4 * s, 2 * s);
   ctx.shadowBlur = 0;
 }
