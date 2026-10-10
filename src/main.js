@@ -7,7 +7,17 @@ import {
   mousePos,
   onTap,
   setAttackLabel,
+  isTouchDevice,
 } from './input.js';
+import {
+  loadBest,
+  saveBest,
+  drawTitle,
+  drawPaused,
+  drawGameOver,
+  pauseButtonRect,
+  drawPauseButton,
+} from './screens.js';
 import {
   createBase,
   updateStructures,
@@ -79,9 +89,9 @@ if (document.fonts) document.fonts.load('10px "Press Start 2P"');
 
 let state;
 
-function newGame() {
+function newGame(mode) {
   state = {
-    mode: 'play',
+    mode, // 'title' | 'play' | 'paused' | 'over'
     player: createPlayer(),
     zombies: [],
     spawner: createSpawner(),
@@ -96,20 +106,51 @@ function newGame() {
     build: createBuild(),
     shots: [],
     bolts: [],
+    best: loadBest(),
+    newBest: false,
   };
   resetWorld();
-  state.cycle.banner = { text: 'Day 1', sub: 'Gather and build before night falls', color: '#ffd98a', t: 3 };
+  if (mode === 'play') {
+    state.cycle.banner = { text: 'Day 1', sub: 'Gather and build before night falls', color: '#ffd98a', t: 3 };
+  }
 }
-newGame();
+newGame('title');
 
-function restart() {
-  if (state.mode === 'over') newGame();
+function start() {
+  if (state.mode === 'over' || state.mode === 'title') newGame('play');
 }
+
+function togglePause() {
+  if (state.mode === 'play') state.mode = 'paused';
+  else if (state.mode === 'paused') state.mode = 'play';
+}
+
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') restart();
+  const k = e.key.toLowerCase();
+  if (k === 'enter') start();
+  else if (k === 'p') togglePause();
+  else if (k === 'escape' && (state.mode === 'paused' || !state.build.on)) togglePause();
 });
-canvas.addEventListener('pointerdown', restart);
-onTap((x, y) => state.mode === 'play' && handleTap(state.build, x, y, W, H));
+// Pause automatically when the tab is hidden.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && state.mode === 'play') state.mode = 'paused';
+});
+onTap((x, y) => {
+  if (state.mode === 'title' || state.mode === 'over') {
+    start();
+    return true;
+  }
+  if (state.mode === 'paused') {
+    togglePause();
+    return true;
+  }
+  const r = pauseButtonRect(W);
+  if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+    togglePause();
+    return true;
+  }
+  return handleTap(state.build, x, y, W, H);
+});
 
 function screenToWorld(x, y) {
   return { x: (x - W / 2) / ZOOM + state.cam.x, y: (y - H / 2) / ZOOM + state.cam.y };
@@ -200,6 +241,8 @@ function update(dt) {
   if (p.hp <= 0) {
     p.hp = 0;
     s.mode = 'over';
+    s.newBest = saveBest(s.cycle.nightsSurvived);
+    s.best = loadBest();
   }
 
   // Forget zombies that wandered far away.
@@ -257,21 +300,6 @@ function drawHud() {
   if (state.mode === 'play') drawHotbar(ctx, state.build, state.inv, W, H);
 }
 
-function drawGameOver() {
-  ctx.fillStyle = 'rgba(20, 0, 0, 0.6)';
-  ctx.fillRect(0, 0, W, H);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ff6b5a';
-  ctx.font = '24px "Press Start 2P", monospace';
-  ctx.fillText('The zombies got you', W / 2, H / 2 - 10);
-  ctx.fillStyle = '#ffd98a';
-  ctx.font = '12px "Press Start 2P", monospace';
-  const n = state.cycle.nightsSurvived;
-  ctx.fillText(`You survived ${n} night${n === 1 ? '' : 's'}`, W / 2, H / 2 + 24);
-  ctx.fillStyle = '#a0a4ad';
-  ctx.font = '10px "Press Start 2P", monospace';
-  ctx.fillText('Press Enter or tap to try again', W / 2, H / 2 + 54);
-}
 
 function draw() {
   const s = state;
@@ -330,10 +358,20 @@ function draw() {
     ctx.fillRect(0, 0, W, H);
   }
 
+  if (s.mode === 'title') {
+    drawTitle(ctx, W, H, s.best, s.time);
+    return;
+  }
   drawHud();
   drawBanner(ctx, s.cycle, W, H);
-  if (s.mode === 'over') drawGameOver();
-  else drawTouchControls(ctx);
+  if (s.mode === 'over') {
+    drawGameOver(ctx, W, H, s.cycle.nightsSurvived, s.best, s.newBest);
+  } else if (s.mode === 'paused') {
+    drawPaused(ctx, W, H);
+  } else {
+    drawTouchControls(ctx);
+    if (isTouchDevice()) drawPauseButton(ctx, W);
+  }
 }
 
 let last = performance.now();

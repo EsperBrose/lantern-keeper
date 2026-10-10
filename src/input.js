@@ -88,6 +88,10 @@ export function attachTouch(el) {
   el.addEventListener('pointercancel', end);
 }
 
+export function isTouchDevice() {
+  return isTouch;
+}
+
 export function attackHeld() {
   return keys.has(' ') || keys.has('j') || mouseDown || attackTouchId !== null;
 }
