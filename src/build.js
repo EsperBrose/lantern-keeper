@@ -45,17 +45,10 @@ function select(b, i) {
   }
 }
 
-// Click/tap on the hotbar. Returns true if it was used.
-export function handleTap(b, x, y, w, h) {
+// Which hotbar slot (0-based) is at screen point (x, y), or -1.
+export function hotbarSlotAt(x, y, w, h) {
   const rects = slotRects(w, h);
-  for (let i = 0; i < rects.length; i++) {
-    const r = rects[i];
-    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
-      select(b, i);
-      return true;
-    }
-  }
-  return false;
+  return rects.findIndex((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
 }
 
 export function handleKeys(b, consumeKey) {

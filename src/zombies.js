@@ -72,7 +72,21 @@ export function igniteAll(zombies) {
   }
 }
 
-export function updateZombies(zombies, player, dt) {
+function nearestPlayer(players, z) {
+  let best = null;
+  let bestD = Infinity;
+  for (const p of players) {
+    const d = Math.hypot(p.x - z.x, p.y - z.y);
+    if (d < bestD) {
+      bestD = d;
+      best = p;
+    }
+  }
+  return best;
+}
+
+// players: the players zombies can chase (the ones still standing).
+export function updateZombies(zombies, players, dt) {
   for (const z of zombies) {
     if (z.burn !== undefined) {
       z.burn -= dt;
@@ -80,6 +94,9 @@ export function updateZombies(zombies, player, dt) {
       z.phase += dt * 12; // flailing
       continue;
     }
+    z.hurt = Math.max(0, z.hurt - dt);
+    const player = nearestPlayer(players, z);
+    if (!player) continue;
     z.phase += dt * (z.kind === 'runner' ? 11 : 5);
     const dx = player.x - z.x;
     const dy = player.y - z.y;
@@ -89,7 +106,6 @@ export function updateZombies(zombies, player, dt) {
     z.x += (dx / d) * z.speed * lurch * dt;
     z.y += (dy / d) * z.speed * lurch * dt;
     z.facing = dx >= 0 ? 1 : -1;
-    z.hurt = Math.max(0, z.hurt - dt);
   }
   // Keep zombies from stacking on top of each other.
   for (let i = 0; i < zombies.length; i++) {

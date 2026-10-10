@@ -1,10 +1,16 @@
 import { drawPerson } from './blocky.js';
 
-// The wanderer: a blocky human carrying a lantern.
-export function createPlayer() {
+// Shirt colors per player: P1 red, P2 blue.
+const SHIRTS = ['#b5452f', '#2f6fb5'];
+
+// The wanderer: a blocky human carrying a lantern. index 0 = P1, 1 = P2.
+export function createPlayer(index = 0) {
   return {
-    x: 0,
+    index,
+    x: index * 30,
     y: 0,
+    down: false, // knocked out until sunrise (multiplayer)
+    hurtFlash: 0,
     speed: 170,
     facing: 1, // 1 = right, -1 = left
     walk: 0, // walk-cycle phase
@@ -38,6 +44,7 @@ export function updatePlayer(p, move, dt) {
   }
   p.swing = Math.max(0, p.swing - dt);
   p.cooldown = Math.max(0, p.cooldown - dt);
+  p.hurtFlash = Math.max(0, p.hurtFlash - dt);
 }
 
 // Starts a swing if the axe is ready. Returns true when a swing starts.
@@ -53,14 +60,46 @@ export function swingPoint(p) {
   return { x: p.x + p.aimX * 16, y: p.y - 4 + p.aimY * 14 };
 }
 
-const COLORS = {
-  skin: '#e8b48a',
-  hair: '#4a2f1b',
-  shirt: '#b5452f',
-  pants: '#3d4a6b',
-  boots: '#3a2a1a',
-  eye: '#3a6ea5',
-};
+function colorsFor(p) {
+  return {
+    skin: '#e8b48a',
+    hair: p.index === 1 ? '#d9a441' : '#4a2f1b',
+    shirt: SHIRTS[p.index] || SHIRTS[0],
+    pants: '#3d4a6b',
+    boots: '#3a2a1a',
+    eye: '#3a6ea5',
+  };
+}
+
+// A knocked-out player shows as a little blocky gravestone until sunrise.
+function drawGrave(ctx, p) {
+  const x = Math.round(p.x);
+  const y = Math.round(p.y);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(x - 9, y + 12, 18, 4);
+  ctx.fillStyle = '#8d939a';
+  ctx.fillRect(x - 7, y - 8, 14, 22);
+  ctx.fillRect(x - 5, y - 11, 10, 3);
+  ctx.fillStyle = '#5c6066';
+  ctx.fillRect(x - 1, y - 6, 2, 10);
+  ctx.fillRect(x - 4, y - 3, 8, 2);
+  ctx.fillStyle = SHIRTS[p.index] || SHIRTS[0];
+  ctx.fillRect(x - 7, y + 10, 14, 4);
+}
+
+// Small "P1" / "P2" tag above a player's head.
+export function drawNameTag(ctx, p) {
+  const label = `P${p.index + 1}`;
+  ctx.save();
+  ctx.font = '6px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  const y = Math.round(p.y) - 30;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(Math.round(p.x) - 9, y - 7, 18, 9);
+  ctx.fillStyle = p.index === 1 ? '#8fc4ff' : '#ff9a8a';
+  ctx.fillText(label, Math.round(p.x), y);
+  ctx.restore();
+}
 
 function bobOf(p) {
   return p.moving ? Math.round(Math.abs(Math.cos(p.walk)) * 2) : 0;
@@ -72,7 +111,11 @@ export function lanternPos(p) {
 }
 
 export function drawPlayer(ctx, p) {
-  drawPerson(ctx, p.x, p.y, p.facing, p.walk, p.moving, COLORS, 'hold');
+  if (p.down) {
+    drawGrave(ctx, p);
+    return;
+  }
+  drawPerson(ctx, p.x, p.y, p.facing, p.walk, p.moving, colorsFor(p), 'hold');
 
   // Lantern hanging from the hand
   const bob = bobOf(p);
