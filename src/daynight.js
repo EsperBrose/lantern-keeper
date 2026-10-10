@@ -24,7 +24,11 @@ export function updateCycle(c, dt) {
   c.phase = (c.phase + 1) % PHASES.length;
   const name = PHASES[c.phase].name;
   if (name === 'night') {
-    c.banner = { text: `Night ${c.day}`, sub: 'The zombies are coming…', color: '#ff6b5a', t: 3 };
+    const sub = {
+      2: 'Watch out for fast runners!',
+      3: 'Big brutes smash walls!',
+    }[c.day] || 'The zombies are coming…';
+    c.banner = { text: `Night ${c.day}`, sub, color: '#ff6b5a', t: 3 };
   } else if (name === 'dawn') {
     c.nightsSurvived++;
   } else if (name === 'day') {

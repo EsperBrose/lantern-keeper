@@ -29,7 +29,7 @@ import {
   canPlaceHere,
   drawHotbar,
 } from './build.js';
-import { updateTowers, drawShots, updateBolts, drawBolts, towerLights } from './towers.js';
+import { updateTowers, drawShots, updateBolts, drawBolts, towerLights, campfireHeal } from './towers.js';
 import { createPlayer, updatePlayer, drawPlayer, lanternPos, trySwing, swingPoint } from './player.js';
 import { drawGround, drawTrees, resetWorld, updateWorld, nodesNear, hitNode } from './world.js';
 import { createPopups, addPopup, updatePopups, drawPopups, drawIcon } from './popups.js';
@@ -38,7 +38,7 @@ import {
   createSpawner,
   updateSpawner,
   updateZombies,
-  countTouching,
+  biteLoad,
   igniteAll,
   drawZombie,
   drawZombieEyes,
@@ -182,19 +182,20 @@ function update(dt) {
   // Walls block zombies; blocked zombies smash the wall in their way.
   for (const z of s.zombies) {
     if (z.burn !== undefined) continue;
-    const hits = collide(s.base, z, 9);
-    if (hits.length > 0) damage(hits[0], WALL_SMASH_DPS * dt);
+    const hits = collide(s.base, z, z.r - 2);
+    if (hits.length > 0) damage(hits[0], WALL_SMASH_DPS * z.wall * dt);
   }
   updateStructures(s.base, dt);
   s.kills += updateTowers(s.base, s.zombies, s.shots, s.bolts, dt);
   updateBolts(s.bolts, dt);
   s.zombies = s.zombies.filter((z) => !z.dead);
 
-  const biting = countTouching(s.zombies, p);
+  const biting = biteLoad(s.zombies, p);
   if (biting > 0) {
     p.hp -= biting * BITE_DPS * dt;
     s.hurtFlash = 0.25;
   }
+  campfireHeal(s.base, p, dt);
   s.hurtFlash = Math.max(0, s.hurtFlash - dt);
   if (p.hp <= 0) {
     p.hp = 0;
