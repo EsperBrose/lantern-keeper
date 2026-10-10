@@ -18,6 +18,8 @@ import {
   pauseButtonRect,
   drawPauseButton,
 } from './screens.js';
+import { sfx, toggleMute, isMuted } from './audio.js';
+import { burst, updateParticles, drawParticles } from './particles.js';
 import {
   createBase,
   updateStructures,
@@ -108,6 +110,8 @@ function newGame(mode) {
     bolts: [],
     best: loadBest(),
     newBest: false,
+    particles: [],
+    shake: 0,
   };
   resetWorld();
   if (mode === 'play') {
@@ -129,6 +133,7 @@ window.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   if (k === 'enter') start();
   else if (k === 'p') togglePause();
+  else if (k === 'm') toggleMute();
   else if (k === 'escape' && (state.mode === 'paused' || !state.build.on)) togglePause();
 });
 // Pause automatically when the tab is hidden.
@@ -160,6 +165,7 @@ function screenToWorld(x, y) {
 function swingAxe(s) {
   const p = s.player;
   const sp = swingPoint(p);
+  sfx('swing');
   for (const z of s.zombies) {
     if (z.burn !== undefined || z.dead) continue;
     if (Math.hypot(z.x - sp.x, z.y - 6 - sp.y) > 24) continue;
@@ -167,6 +173,8 @@ function swingAxe(s) {
     z.hurt = 0.12;
     z.x += p.aimX * 14;
     z.y += p.aimY * 14;
+    burst(s.particles, z.x, z.y - 10, 'zombie', 4);
+    sfx('hit');
     if (z.hp <= 0) {
       z.dead = true;
       s.kills++;
@@ -182,6 +190,18 @@ function swingAxe(s) {
   const gain = destroyed ? 3 : 1;
   s.inv[res] += gain;
   addPopup(s.popups, n.x, n.y - 24, `+${gain}`, res);
+  burst(s.particles, n.x, n.y - 8, res, destroyed ? 14 : 5);
+  sfx(res === 'wood' ? 'chop' : 'mine');
+}
+
+// Death poof + sound for every zombie that died this frame (any cause).
+function reapZombies(s) {
+  for (const z of s.zombies) {
+    if (!z.dead || z.burn !== undefined) continue;
+    burst(s.particles, z.x, z.y - 10, 'zombie', z.kind === 'brute' ? 16 : 9);
+    sfx('kill');
+  }
+  s.zombies = s.zombies.filter((z) => !z.dead);
 }
 
 // World units visible from the center to the screen corner.
@@ -196,8 +216,16 @@ function update(dt) {
 
   const p = s.player;
   const started = updateCycle(s.cycle, dt);
-  if (started === 'dawn') igniteAll(s.zombies);
-  if (started === 'night') s.spawner.timer = 0;
+  if (started === 'dawn') {
+    igniteAll(s.zombies);
+    sfx('dawn');
+  }
+  if (started === 'night') {
+    s.spawner.timer = 0;
+    sfx('night');
+  }
+  updateParticles(s.particles, dt);
+  s.shake = Math.max(0, s.shake - dt * 3);
 
   updatePlayer(p, moveVector(), dt);
   collide(s.base, p, 7);
@@ -212,7 +240,9 @@ function update(dt) {
   setAttackLabel(b.on ? 'PLACE' : 'AXE');
   if (b.on) {
     const phase = phaseName(s.cycle);
+    const before = s.base.list.length;
     if (attackHeld()) tryPlace(b, s.base, s.inv, p, phase === 'day' || phase === 'dusk');
+    if (s.base.list.length > before) sfx('place');
     if (consumeKey('x')) tryDemolish(b, s.base, s.inv);
   } else if (attackHeld() && trySwing(p)) {
     swingAxe(s);
@@ -226,21 +256,35 @@ function update(dt) {
     const hits = collide(s.base, z, z.r - 2);
     if (hits.length > 0) damage(hits[0], WALL_SMASH_DPS * z.wall * dt);
   }
+  // Walls that just broke
+  for (const st of s.base.list) {
+    if (st.hp > 0) continue;
+    burst(s.particles, st.x, st.y - 6, 'wall', 14);
+    sfx('break');
+  }
   updateStructures(s.base, dt);
+
+  const shotsBefore = s.shots.length;
+  const boltsBefore = s.bolts.length;
   s.kills += updateTowers(s.base, s.zombies, s.shots, s.bolts, dt);
+  if (s.shots.length > shotsBefore) sfx('arrow');
+  if (s.bolts.length > boltsBefore) sfx('zap');
   updateBolts(s.bolts, dt);
-  s.zombies = s.zombies.filter((z) => !z.dead);
+  reapZombies(s);
 
   const biting = biteLoad(s.zombies, p);
   if (biting > 0) {
     p.hp -= biting * BITE_DPS * dt;
     s.hurtFlash = 0.25;
+    s.shake = Math.max(s.shake, 0.5);
+    sfx('hurt', 0.35);
   }
   campfireHeal(s.base, p, dt);
   s.hurtFlash = Math.max(0, s.hurtFlash - dt);
   if (p.hp <= 0) {
     p.hp = 0;
     s.mode = 'over';
+    sfx('over');
     s.newBest = saveBest(s.cycle.nightsSurvived);
     s.best = loadBest();
   }
@@ -297,6 +341,10 @@ function drawHud() {
   });
 
   drawClock(ctx, state.cycle, W / 2, 32);
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillText(isMuted() ? 'M: sound OFF' : 'M: sound on', 14, 76);
   if (state.mode === 'play') drawHotbar(ctx, state.build, state.inv, W, H);
 }
 
@@ -304,7 +352,9 @@ function drawHud() {
 function draw() {
   const s = state;
   const p = s.player;
-  const cam = s.cam;
+  // Screen shake nudges the camera a little.
+  const sh = s.shake * 4;
+  const cam = { x: s.cam.x + (Math.random() - 0.5) * sh, y: s.cam.y + (Math.random() - 0.5) * sh };
   const vw = W / ZOOM;
   const vh = H / ZOOM;
   const toScreen = (x, y) => ({ x: (x - cam.x) * ZOOM + W / 2, y: (y - cam.y) * ZOOM + H / 2 });
@@ -323,6 +373,7 @@ function draw() {
   ].sort((a, b) => a.y - b.y);
   for (const t of things) t.draw();
   drawShots(ctx, s.shots);
+  drawParticles(ctx, s.particles);
 
   const b = s.build;
   if (b.on && b.target && s.mode === 'play') {
